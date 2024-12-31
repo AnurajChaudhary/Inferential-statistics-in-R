@@ -1,0 +1,169 @@
+---
+title: "Statistical inference with the GSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+```
+
+### Load data
+
+
+```{r load-data}
+load("gss.Rdata")
+```
+
+
+
+* * *
+
+## Part 1: Data:
+**As discussed on the Gss website** : Since 1972, the General Social Survey (GSS) has been monitoring societal change and studying the growing complexity of American society. The GSS aims to gather data on contemporary American society in order to monitor and explain trends and constants in attitudes, behaviors, and attributes; to examine the structure and functioning of society in general as well as the role played by relevant subgroups; to compare the United States to other societies in order to place American society in comparative perspective and develop cross-national models of human society; and to make high-quality data easily accessible to scholars, students, policy makers, and others, with minimal cost and waiting.
+**My evaluation**: The method of data collection is stratified survey where surveyor are selected randomly. Hence it is safe to assume the given dataset is collection of random samples.
+It is a survey and there is no assignment of the treatment to the participants.
+
+* * *
+
+## Part 2: Research question
+
+Question no. 1 **Are people who receive better education also likely to have spouse who have received better education?**
+
+
+Question no. 2 **Is being a particular race and being unemployed dependent to each other?**
+
+
+Question no. 3 **Are people who say abortion is right under all the circumstance and people who say abortion is wrong under all circumstances dependent to sex?**
+
+
+* * *
+
+
+## Part 3: Exploratory data analysis
+**Are people who receive better education also likely to have spouse who have received better education?**
+
+first we remove all the `NA` entries from the data set using `!is.na` function, where `!` denotes `not`.
+```{r}
+gss_spuc <- gss %>% filter( !is.na(educ) , !is.na(speduc))
+```
+Before we go actual inference of the data we should always visualize the data using normal graphic representation tools to see if there is any need for the inference or not. Data visualization is done using following code
+```{r}
+ggplot( gss_spuc , aes( x = educ , fill = as.factor(speduc))) + geom_bar( position = "stack" ,  stat = "count" )
+```
+Here, we use `as.factor` function to represent `speduc` which is a numerical variable to be a categorical variable. As from above barplot we can see the relative population if people with the level of education they have. this same data can also be visualized in percent bar plot using following code
+```{r}
+ggplot( gss_spuc , aes( x = educ , fill = as.factor(speduc))) + geom_bar( position = "fill" ,  stat = "count" )
+```
+
+
+**Is being a particular race and being unemployed dependent to each other?**
+
+First we filter all thhe `NA` entries in the datas et to remove possible inference using `!is.na` function as before.
+```{r}
+gss_race <- gss %>% filter( !is.na(race) , !is.na(unemp))
+```
+Then we plot the data into visually presentable form using following code
+```{r}
+ggplot( gss_race , aes( x = race , fill = unemp )) + geom_bar( position = "fill" , stat = "count")
+```
+As we can see from above plot there is slight difference between the races and their employment status. However, the credibility of that difference cal only tested through hypothesis testing.
+
+
+
+**Are people who say abortion is right under all the circumstance and people who say abortion is wrong under all circumstances dependent to sex?**
+
+
+In this cas as well first we filter `NA` entries from all the concerned variables using`!is.na` function
+```{r}
+gss_aball <- gss %>% filter(!is.na(abdefect) , !is.na(abnomore) , !is.na(abhlth) , !is.na(abpoor) , !is.na(abrape) , !is.na(abany) , !is.na(sex)) 
+```
+Here, `abdefect` , `abnomore` , `abhlth1` , `abpoor` , `abrape` , `abany` all represent their opinion on abortion under different circumstances however our research question is concerned with their opinion being same under all the conditions we must consider for all these variables.
+Now we must filter the entries which say `Yes` to abortion under all of listed circumstances. it is done using following code.
+
+```{r}
+gss_ab1 <- gss_aball %>% filter( abdefect == "Yes" , abnomore == "Yes" , abhlth == "Yes" , abpoor == "Yes" , abrape == "Yes" , abany == "Yes")
+```
+Then we filter the dataset similar way for all the entrie that say abortion is wrong under all of the circumstances.
+```{r}
+gss_ab2 <- gss_aball %>% filter( abdefect == "No" , abnomore == "No" , abhlth == "No" , abpoor == "No" , abrape == "No" , abany == "No")
+```
+now both of the dataset are merged using `fill_join` function
+```{r}
+gss_ab <- full_join(gss_ab1 , gss_ab2) 
+```
+Now we can plot the new created dataset using `ggplot` function
+```{r}
+ggplot( gss_ab , aes( x = sex , fill = abdefect )) + geom_bar( position = "fill" , stat = "count")
+```
+as we can see from the above plot we can observe there is slight difference in opinion in either gender. Here from now on we can use any of 6 circumstances of opinion as the measure because all of the variable consists of same value of character. in our case we have used `abdefect` .
+
+
+
+* * *
+
+## Part 4: Inference
+
+**Are people who receive better education also likely to have spouse who have received better education?**
+
+**hypothesis**
+
+Ho : There is no relationship between self education status and spouse education status
+HA : There is a relationship between self education status and spouse education status
+**Check conditions**
+1. since the data is collected randomly and it is definitely less than 10% of the total population we can assume each entries are independent of one another.
+2. each particular cell has also at least 5 expected case as observed from test output.
+**method** : since both of the variables are categorical so we must apply chi-square test of independence.
+**inference**
+inference was performed using following code:
+```{r}
+inference( gss_spuc ,  x = as.factor(educ) , y = as.factor(speduc) , statistic = "proportion" , type = "ht" , alternative = "greater" , method = "theoretical")
+```
+**interpretation** : since the p value is very low we fail to reject null hypothesis and we can interpret that there is no relationship between the educational qualification and spouse's educational qualification
+
+**Is being a particular race and being unemployed dependent to each other?**
+
+**Hypothesis**
+
+Ho: There is no relationship between race and unemployment status.
+Ha: There is a relationship between race and unemployment status.
+**Check conditions**
+1. since the data is collected randomly and it is definitely less than 10% of the total population we can assume each entries are independent of one another.
+2. each particular cell has also at least 5 expected case as observed from test output.
+**method** : since both of the variables are categorical so we must apply chi-square test of independence.
+**inference**
+inference was performed using following code:
+```{r}
+inference( gss_race ,  y = unemp , x = race , statistic = "proportion" , method = "theoretical" , alternative = "greater" , type = "ht" )
+```
+**Interpretation**
+since p-value is very low we fail to reject null hypothesis and we can assume there is no relationship between being certain race and their unemployment level.
+
+**Are people who say abortion is right under all the circumstance and people who say abortion is wrong under all circumstances dependent to sex?**
+
+**Hypothesis**
+
+Ho: Opinion on abortion is not related to the gender
+Ha: Opinion on abortion is related to the gender.
+**Check conditions**
+1. since the data is collected randomly and it is definitely less than 10% of the total population we can assume each entries are independent of one another.
+2. There is at least 10 success and 10 failures in the given sample as given by following code for success failure condition
+```{r}
+gss_ab %>% group_by(abdefect, abnomore, abhlth, abpoor, abrape, abany) %>% summarise(n())
+```
+**method** : since there are only two possible entries we can use test for 2 independent proportion
+**Inference**
+Inference is done by following code
+```{r}
+inference( gss_ab ,  y = abdefect , x = sex , statistic = "proportion" , success = "Yes" , null = 0 , method = "theoretical" , type = "ht" , alternative = "twosided"  )
+```
+**Interpretation** since, the success condition was saying "yes" to abortion in all the circumstances, and p-value is very low we failed to reject null hypothesis and we can conclude that opinion on abortion is not dependent to gender
